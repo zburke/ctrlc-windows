@@ -3,7 +3,7 @@ name: Test
 on:
   pull_request:
     branches:
-      - 'v[0-9]+'
+      - "v[0-9]+"
 
 jobs:
   test:
@@ -30,3 +30,43 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - run: yarn test
+
+  effection-smoke-test:
+    runs-on: ${{ matrix.platform }}
+    name: test effection linked - ${{ matrix.platform }} node@${{ matrix.node }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ubuntu-latest, windows-latest]
+        node: [10, 12, 14, 16]
+
+    steps:
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      # checkout and setup ctrlc-windows
+      - uses: actions/checkout@v2
+        with:
+          path: ctrlc-windows
+      - run: yarn install --ignore-scripts
+        working-directory: ctrlc-windows
+      - run: yarn build release
+        working-directory: ctrlc-windows
+      - run: yarn link
+        working-directory: ctrlc-windows
+      - uses: volta-cli/action@v1
+        with:
+          node-version: ${{ matrix.node }}
+      # checkout and setup effection then run tests
+      - uses: actions/checkout@v2
+        with:
+          path: effection
+          repository: thefrontside/effection
+      - run: yarn install
+        working-directory: effection
+      - run: yarn link ctrlc-windows
+        working-directory: effection
+      - run: yarn prepack
+        working-directory: effection
+      - run: yarn test
+        working-directory: effection
